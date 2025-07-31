@@ -1,8 +1,12 @@
 import logging
 import os
+import shutil
 from typing import Any, List, Dict, Optional
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import JSONResponse
+import uvicorn
 
 # Import exceptions
 from excel_mcp.exceptions import (
@@ -60,19 +64,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("excel-mcp")
 # Initialize FastMCP server
-mcp = FastMCP(
-    "excel-mcp",
-    version="0.1.5",
-    description="Excel MCP Server for manipulating Excel files",
-    dependencies=["openpyxl>=3.1.5"],
-    env_vars={
-        "EXCEL_FILES_PATH": {
-            "description": "Path to Excel files directory",
-            "required": False,
-            "default": EXCEL_FILES_PATH
-        }
-    }
-)
+mcp = FastMCP("excel-mcp")
 
 def get_excel_path(filename: str) -> str:
     """Get full path to Excel file.
@@ -618,17 +610,179 @@ async def run_sse():
     finally:
         logger.info("Server shutdown complete")
 
-async def run_streamable_http():
-    """Run Excel MCP server in streamable HTTP mode."""
+def run_streamable_http():
+    """Run Excel MCP server with FastAPI integration in streamable HTTP mode."""
     # Assign value to EXCEL_FILES_PATH in streamable HTTP mode
     global EXCEL_FILES_PATH
     EXCEL_FILES_PATH = os.environ.get("EXCEL_FILES_PATH", "./excel_files")
     # Create directory if it doesn't exist
     os.makedirs(EXCEL_FILES_PATH, exist_ok=True)
     
+    # Get port from environment variable, default to 8000
+    port = int(os.environ.get("FASTMCP_PORT", "8000"))
+    
     try:
-        logger.info(f"Starting Excel MCP server with streamable HTTP transport (files directory: {EXCEL_FILES_PATH})")
-        await mcp.run_streamable_http_async()
+        logger.info(f"Starting Excel MCP server with FastAPI integration (files directory: {EXCEL_FILES_PATH})")
+        
+        # Step 1: Create MCP ASGI app following docs pattern
+        mcp_app = mcp.http_app()
+        
+        # Step 2: Create FastAPI app with MCP lifespan  
+        app = FastAPI(
+            title="Excel MCP Server API",
+            description="Excel MCP Server with FastAPI integration",
+            version="0.1.5",
+            lifespan=mcp_app.lifespan
+        )
+        
+        # Step 3: Add routes directly to the FastAPI app
+        @app.get("/health")
+        def health_check():
+            """Health check endpoint."""
+            return {
+                "status": "healthy",
+                "service": "excel-mcp-server",
+                "version": "0.1.5",
+                "mcp_endpoint": "/mcp",
+                "excel_files_path": EXCEL_FILES_PATH
+            }
+        
+        @app.get("/")
+        def root():
+            """Root endpoint with service information."""
+            return {
+                "message": "Excel MCP Server API",
+                "version": "0.1.5",
+                "endpoints": {
+                    "health": "/health",
+                    "mcp": "/mcp",
+                    "docs": "/docs",
+                    "upload": "/upload/{user_id}",
+                    "files": "/files/{user_id}"
+                },
+                "excel_files_path": EXCEL_FILES_PATH
+            }
+        
+        @app.post("/upload/{user_id}")
+        async def upload_excel_file(
+            user_id: str,
+            file: UploadFile = File(...)
+        ):
+            """Upload Excel file for a specific user."""
+            try:
+                # Validate file type
+                if not file.filename:
+                    raise HTTPException(status_code=400, detail="No file provided")
+                
+                # Check if it's an Excel file
+                allowed_extensions = {'.xlsx', '.xls', '.xlsm'}
+                file_extension = os.path.splitext(file.filename)[1].lower()
+                if file_extension not in allowed_extensions:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}"
+                    )
+                
+                # Create user directory if it doesn't exist
+                user_dir = os.path.join(EXCEL_FILES_PATH, user_id)
+                os.makedirs(user_dir, exist_ok=True)
+                
+                # Generate file path
+                file_path = os.path.join(user_dir, file.filename)
+                relative_path = os.path.join(user_id, file.filename)
+                
+                # Save the file
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                
+                logger.info(f"File uploaded: {file_path}")
+                
+                return {
+                    "message": "File uploaded successfully",
+                    "filename": file.filename,
+                    "user_id": user_id,
+                    "file_path": relative_path,  # This is what you use with MCP tools
+                    "full_path": file_path,
+                    "size_bytes": os.path.getsize(file_path)
+                }
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Upload failed: {e}")
+                raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        
+        @app.get("/files/{user_id}")
+        def list_user_files(user_id: str):
+            """List all Excel files for a specific user."""
+            try:
+                user_dir = os.path.join(EXCEL_FILES_PATH, user_id)
+                
+                if not os.path.exists(user_dir):
+                    return {
+                        "user_id": user_id,
+                        "files": [],
+                        "message": "User directory does not exist"
+                    }
+                
+                files = []
+                for filename in os.listdir(user_dir):
+                    file_path = os.path.join(user_dir, filename)
+                    if os.path.isfile(file_path):
+                        relative_path = os.path.join(user_id, filename)
+                        files.append({
+                            "filename": filename,
+                            "relative_path": relative_path,  # Use this with MCP tools
+                            "size_bytes": os.path.getsize(file_path),
+                            "modified": os.path.getmtime(file_path)
+                        })
+                
+                return {
+                    "user_id": user_id,
+                    "files": files,
+                    "count": len(files)
+                }
+                
+            except Exception as e:
+                logger.error(f"Failed to list files for user {user_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
+        
+        @app.delete("/files/{user_id}/{filename}")
+        def delete_user_file(user_id: str, filename: str):
+            """Delete a specific file for a user."""
+            try:
+                file_path = os.path.join(EXCEL_FILES_PATH, user_id, filename)
+                
+                if not os.path.exists(file_path):
+                    raise HTTPException(status_code=404, detail="File not found")
+                
+                os.remove(file_path)
+                logger.info(f"File deleted: {file_path}")
+                
+                return {
+                    "message": "File deleted successfully",
+                    "filename": filename,
+                    "user_id": user_id
+                }
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to delete file: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+        
+        # Step 4: Mount the MCP server
+        app.mount("/mcp", mcp_app)
+        
+        logger.info(f"Server will be available at:")
+        logger.info(f"  - API Health Check: http://localhost:{port}/health")
+        logger.info(f"  - API Root: http://localhost:{port}/")
+        logger.info(f"  - MCP Endpoint: http://localhost:{port}/mcp")
+        logger.info(f"  - API Docs: http://localhost:{port}/docs")
+        
+        # Step 5: Run with uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+        
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:

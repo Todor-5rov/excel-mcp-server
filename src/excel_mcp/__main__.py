@@ -25,11 +25,8 @@ def sse():
 @app.command()
 def streamable_http():
     """Start Excel MCP Server in streamable HTTP mode"""
-    print("Excel MCP Server - Streamable HTTP mode")
-    print("---------------------------------------")
-    print("Press Ctrl+C to exit")
     try:
-        asyncio.run(run_streamable_http())
+        run_streamable_http()
     except KeyboardInterrupt:
         print("\nShutting down server...")
     except Exception as e:
