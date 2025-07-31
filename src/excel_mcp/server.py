@@ -6,6 +6,7 @@ from typing import Any, List, Dict, Optional
 from fastmcp import FastMCP
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Import exceptions
@@ -633,6 +634,15 @@ def run_streamable_http():
             description="Excel MCP Server with FastAPI integration",
             version="0.1.5",
             lifespan=mcp_app.lifespan
+        )
+        
+        # Add CORS middleware to allow all origins and methods
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],  # Allow all origins
+            allow_credentials=True,
+            allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, etc.)
+            allow_headers=["*"],  # Allow all headers
         )
         
         # Step 3: Add routes directly to the FastAPI app
