@@ -65,7 +65,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("excel-mcp")
 # Initialize FastMCP server
-mcp = FastMCP("excel-mcp")
+mcp = FastMCP("excel-mcp", stateless_http=True)
 
 def get_excel_path(filename: str) -> str:
     """Get full path to Excel file.
