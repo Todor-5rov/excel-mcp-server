@@ -75,10 +75,16 @@ def get_excel_path(filename: str) -> str:
         
     Returns:
         Full path to Excel file
+        
+    Raises:
+        ValueError: If path validation fails
     """
     # If filename is already an absolute path, return it
     if os.path.isabs(filename):
-        return filename
+        if os.path.exists(filename):
+            return filename
+        else:
+            raise ValueError(f"File not found: {filename}")
 
     # Check if in SSE mode (EXCEL_FILES_PATH is not None)
     if EXCEL_FILES_PATH is None:
@@ -86,7 +92,11 @@ def get_excel_path(filename: str) -> str:
         raise ValueError(f"Invalid filename: {filename}, must be an absolute path when not in SSE mode")
 
     # In SSE mode, if it's a relative path, resolve it based on EXCEL_FILES_PATH
-    return os.path.join(EXCEL_FILES_PATH, filename)
+    full_path = os.path.join(EXCEL_FILES_PATH, filename)
+    if not os.path.exists(full_path):
+        raise ValueError(f"File not found: {full_path}")
+    
+    return full_path
 
 @mcp.tool()
 def apply_formula(
@@ -110,6 +120,8 @@ def apply_formula(
         from excel_mcp.calculations import apply_formula as apply_formula_impl
         result = apply_formula_impl(full_path, sheet_name, cell, formula)
         return result["message"]
+    except ValueError as e:
+        return f"File path error: {str(e)}"
     except (ValidationError, CalculationError) as e:
         return f"Error: {str(e)}"
     except Exception as e:
@@ -226,6 +238,8 @@ def read_data_from_excel(
         import json
         return json.dumps(result, indent=2, default=str)
         
+    except ValueError as e:
+        return f"File path error: {str(e)}"
     except Exception as e:
         logger.error(f"Error reading data: {e}")
         return f"Error reading data: {str(e)}"
@@ -252,6 +266,8 @@ def write_data_to_excel(
         full_path = get_excel_path(filepath)
         result = write_data(full_path, sheet_name, data, start_cell)
         return result["message"]
+    except ValueError as e:
+        return f"File path error: {str(e)}"
     except (ValidationError, DataError) as e:
         return f"Error: {str(e)}"
     except Exception as e:
@@ -262,7 +278,19 @@ def write_data_to_excel(
 def create_workbook(filepath: str) -> str:
     """Create new Excel workbook."""
     try:
-        full_path = get_excel_path(filepath)
+        # For create operations, allow path creation without file existence check
+        if os.path.isabs(filepath):
+            full_path = filepath
+        else:
+            if EXCEL_FILES_PATH is None:
+                return f"Error: Invalid filename: {filepath}, must be an absolute path when not in SSE mode"
+            full_path = os.path.join(EXCEL_FILES_PATH, filepath)
+        
+        # Create directory if it doesn't exist
+        directory = os.path.dirname(full_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        
         from excel_mcp.workbook import create_workbook as create_workbook_impl
         create_workbook_impl(full_path)
         return f"Created workbook at {full_path}"
@@ -431,6 +459,8 @@ def get_workbook_metadata(
         full_path = get_excel_path(filepath)
         result = get_workbook_info(full_path, include_ranges=include_ranges)
         return str(result)
+    except ValueError as e:
+        return f"File path error: {str(e)}"
     except WorkbookError as e:
         return f"Error: {str(e)}"
     except Exception as e:
