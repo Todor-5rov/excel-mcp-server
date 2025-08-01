@@ -5,7 +5,7 @@ from typing import Any, List, Dict, Optional
 
 from fastmcp import FastMCP
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -698,7 +698,8 @@ def run_streamable_http():
                     "mcp": "/mcp",
                     "docs": "/docs",
                     "upload": "/upload/{user_id}",
-                    "files": "/files/{user_id}"
+                    "files": "/files/{user_id}",
+                    "download": "/download/{user_id}/{filename}"
                 },
                 "excel_files_path": EXCEL_FILES_PATH
             }
@@ -810,6 +811,36 @@ def run_streamable_http():
             except Exception as e:
                 logger.error(f"Failed to delete file: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+        
+        @app.get("/download/{user_id}/{filename}")
+        def download_user_file(user_id: str, filename: str):
+            """Download a specific Excel file for a user."""
+            try:
+                file_path = os.path.join(EXCEL_FILES_PATH, user_id, filename)
+                
+                if not os.path.exists(file_path):
+                    raise HTTPException(status_code=404, detail="File not found")
+                
+                # Validate it's an Excel file
+                allowed_extensions = {'.xlsx', '.xls', '.xlsm'}
+                file_extension = os.path.splitext(filename)[1].lower()
+                if file_extension not in allowed_extensions:
+                    raise HTTPException(status_code=400, detail="Invalid file type")
+                
+                logger.info(f"File downloaded: {file_path}")
+                
+                # Return the file as a download
+                return FileResponse(
+                    path=file_path,
+                    filename=filename,
+                    media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to download file: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
         
         # Step 4: Mount the MCP server at root path to handle /mcp/mcp/ requests
         app.mount("/mcp", mcp_app)
