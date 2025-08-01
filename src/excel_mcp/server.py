@@ -114,7 +114,7 @@ def apply_formula(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error applying formula: {e}")
-        raise
+        return f"Error applying formula: {str(e)}"
 
 @mcp.tool()
 def validate_formula_syntax(
@@ -132,7 +132,7 @@ def validate_formula_syntax(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error validating formula: {e}")
-        raise
+        return f"Error validating formula: {str(e)}"
 
 @mcp.tool()
 def format_range(
@@ -186,7 +186,7 @@ def format_range(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error formatting range: {e}")
-        raise
+        return f"Error formatting range: {str(e)}"
 
 @mcp.tool()
 def read_data_from_excel(
@@ -228,7 +228,7 @@ def read_data_from_excel(
         
     except Exception as e:
         logger.error(f"Error reading data: {e}")
-        raise
+        return f"Error reading data: {str(e)}"
 
 @mcp.tool()
 def write_data_to_excel(
@@ -256,7 +256,7 @@ def write_data_to_excel(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error writing data: {e}")
-        raise
+        return f"Error writing data: {str(e)}"
 
 @mcp.tool()
 def create_workbook(filepath: str) -> str:
@@ -270,7 +270,7 @@ def create_workbook(filepath: str) -> str:
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error creating workbook: {e}")
-        raise
+        return f"Error creating workbook: {str(e)}"
 
 @mcp.tool()
 def create_worksheet(filepath: str, sheet_name: str) -> str:
@@ -284,7 +284,7 @@ def create_worksheet(filepath: str, sheet_name: str) -> str:
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error creating worksheet: {e}")
-        raise
+        return f"Error creating worksheet: {str(e)}"
 
 @mcp.tool()
 def create_chart(
@@ -315,7 +315,7 @@ def create_chart(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error creating chart: {e}")
-        raise
+        return f"Error creating chart: {str(e)}"
 
 @mcp.tool()
 def create_pivot_table(
@@ -344,7 +344,7 @@ def create_pivot_table(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error creating pivot table: {e}")
-        raise
+        return f"Error creating pivot table: {str(e)}"
 
 @mcp.tool()
 def create_table(
@@ -369,7 +369,7 @@ def create_table(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error creating table: {e}")
-        raise
+        return f"Error creating table: {str(e)}"
 
 @mcp.tool()
 def copy_worksheet(
@@ -386,7 +386,7 @@ def copy_worksheet(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error copying worksheet: {e}")
-        raise
+        return f"Error copying worksheet: {str(e)}"
 
 @mcp.tool()
 def delete_worksheet(
@@ -402,7 +402,7 @@ def delete_worksheet(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error deleting worksheet: {e}")
-        raise
+        return f"Error deleting worksheet: {str(e)}"
 
 @mcp.tool()
 def rename_worksheet(
@@ -419,7 +419,7 @@ def rename_worksheet(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error renaming worksheet: {e}")
-        raise
+        return f"Error renaming worksheet: {str(e)}"
 
 @mcp.tool()
 def get_workbook_metadata(
@@ -435,7 +435,7 @@ def get_workbook_metadata(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error getting workbook metadata: {e}")
-        raise
+        return f"Error getting workbook metadata: {str(e)}"
 
 @mcp.tool()
 def merge_cells(filepath: str, sheet_name: str, start_cell: str, end_cell: str) -> str:
@@ -448,7 +448,7 @@ def merge_cells(filepath: str, sheet_name: str, start_cell: str, end_cell: str) 
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error merging cells: {e}")
-        raise
+        return f"Error merging cells: {str(e)}"
 
 @mcp.tool()
 def unmerge_cells(filepath: str, sheet_name: str, start_cell: str, end_cell: str) -> str:
@@ -461,7 +461,7 @@ def unmerge_cells(filepath: str, sheet_name: str, start_cell: str, end_cell: str
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error unmerging cells: {e}")
-        raise
+        return f"Error unmerging cells: {str(e)}"
 
 @mcp.tool()
 def get_merged_cells(filepath: str, sheet_name: str) -> str:
@@ -473,7 +473,7 @@ def get_merged_cells(filepath: str, sheet_name: str) -> str:
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error getting merged cells: {e}")
-        raise
+        return f"Error getting merged cells: {str(e)}"
 
 @mcp.tool()
 def copy_range(
@@ -501,7 +501,7 @@ def copy_range(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error copying range: {e}")
-        raise
+        return f"Error copying range: {str(e)}"
 
 @mcp.tool()
 def delete_range(
@@ -527,7 +527,7 @@ def delete_range(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error deleting range: {e}")
-        raise
+        return f"Error deleting range: {str(e)}"
 
 @mcp.tool()
 def validate_excel_range(
@@ -546,7 +546,7 @@ def validate_excel_range(
         return f"Error: {str(e)}"
     except Exception as e:
         logger.error(f"Error validating range: {e}")
-        raise
+        return f"Error validating range: {str(e)}"
 
 @mcp.tool()
 def get_data_validation_info(
@@ -590,7 +590,7 @@ def get_data_validation_info(
         
     except Exception as e:
         logger.error(f"Error getting validation info: {e}")
-        raise
+        return f"Error getting validation info: {str(e)}"
 
 async def run_sse():
     """Run Excel MCP server in SSE mode."""
@@ -781,7 +781,7 @@ def run_streamable_http():
                 logger.error(f"Failed to delete file: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
         
-        # Step 4: Mount the MCP server
+        # Step 4: Mount the MCP server at root path to handle /mcp/mcp/ requests
         app.mount("/mcp", mcp_app)
         
         logger.info(f"Server will be available at:")
